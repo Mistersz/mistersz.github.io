@@ -1,0 +1,122 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# baseURL — MUST match where you host.
+#   • If your repo is named  misterz.github.io   → keep the line below as-is.
+#   • If your repo has any other name (e.g. "blog") →
+#        baseURL = "https://misterz.github.io/blog/"
+#     and set    publishDir + the workflow handle the subpath automatically.
+#   • Custom domain later? Just put it here.
+# ─────────────────────────────────────────────────────────────────────────────
+baseURL = "https://misterz.github.io/"
+languageCode = "en-us"
+title = "Akira — Security Research"
+theme = "PaperMod"
+
+# Pretty URLs, UTF-8, and sane defaults
+enableRobotsTXT = true
+buildDrafts = false
+buildFuture = false
+buildExpired = false
+enableEmoji = true
+pygmentsUseClasses = true
+
+[pagination]
+  pagerSize = 10
+
+# ── Chroma syntax highlighting ───────────────────────────────────────────────
+[markup]
+  [markup.highlight]
+    noClasses = false          # use CSS classes so the theme's dark/light both work
+    anchorLineNos = false
+    codeFences = true
+    guessSyntax = true
+    lineNos = true
+    lineNumbersInTable = true
+    style = "monokai"
+    tabWidth = 4
+  [markup.goldmark.renderer]
+    unsafe = true              # allow raw HTML in markdown (needed for some asides/figures)
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel = 4
+    ordered = false
+
+# ── Output formats (adds JSON for the search index) ─────────────────────────
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
+
+[params]
+  env = "production"
+  author = "Akira"
+  description = "VM escape, hypervisor security, and low-level exploitation writeups."
+  keywords = ["security", "exploitation", "vm escape", "qemu", "hypervisor", "ctf", "pwn"]
+  DateFormat = "2006-01-02"
+  defaultTheme = "dark"        # dark by default; toggle still available
+  disableThemeToggle = false
+  ShowReadingTime = true
+  ShowShareButtons = false
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true   # one-click copy on every code block
+  ShowWordCount = true
+  ShowRssButtonInSectionTermList = true
+  ShowToc = true
+  TocOpen = false
+  comments = false
+  hidemeta = false
+  hideSummary = false
+
+  # Landing page: a short intro with links (clean for an interview reviewer)
+  [params.homeInfoParams]
+    Title = "Akira"
+    Content = "Security research — Linux kernel & the virtualization stack (VM escapes, hypervisor security, microarchitecture). CS @ UFRJ. This is where I publish writeups."
+
+  # Social / contact icons on the landing page
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/Misterz"
+  [[params.socialIcons]]
+    name = "email"
+    url = "mailto:akiraresearchs@gmail.com"
+  [[params.socialIcons]]
+    name = "rss"
+    url = "index.xml"
+
+  [params.assets]
+    disableHLJS = true         # we use Hugo/Chroma, not highlight.js
+    favicon = "/favicon.ico"
+
+  # Fuse.js search needs these fields in the JSON index
+  [params.fuseOpts]
+    isCaseSensitive = false
+    shouldSort = true
+    threshold = 0.4
+    minMatchCharLength = 2
+    keys = ["title", "permalink", "summary", "content"]
+
+# ── Navigation menu ──────────────────────────────────────────────────────────
+[menu]
+  [[menu.main]]
+    identifier = "posts"
+    name = "Posts"
+    url = "/posts/"
+    weight = 10
+  [[menu.main]]
+    identifier = "archive"
+    name = "Archive"
+    url = "/archives/"
+    weight = 20
+  [[menu.main]]
+    identifier = "tags"
+    name = "Tags"
+    url = "/tags/"
+    weight = 30
+  [[menu.main]]
+    identifier = "search"
+    name = "Search"
+    url = "/search/"
+    weight = 40
+  [[menu.main]]
+    identifier = "about"
+    name = "About"
+    url = "/about/"
+    weight = 50
