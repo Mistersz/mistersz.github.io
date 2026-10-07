@@ -1,12 +1,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# baseURL — MUST match where you host.
-#   • If your repo is named  misterz.github.io   → keep the line below as-is.
-#   • If your repo has any other name (e.g. "blog") →
-#        baseURL = "https://misterz.github.io/blog/"
-#     and set    publishDir + the workflow handle the subpath automatically.
-#   • Custom domain later? Just put it here.
+# baseURL — your custom apex domain. The deploy workflow overrides this at build
+# time with the URL GitHub Pages reports, so this value only matters for LOCAL
+# builds — but keeping it correct means `hugo` locally generates the right links.
+# The  static/CNAME  file is what actually binds the domain to the site.
 # ─────────────────────────────────────────────────────────────────────────────
-baseURL = "https://misterz.github.io/"
+baseURL = "https://akira.sh/"
 languageCode = "en-us"
 title = "Akira — Security Research"
 theme = "PaperMod"
