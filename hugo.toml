@@ -1,10 +1,11 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# baseURL — your custom apex domain. The deploy workflow overrides this at build
-# time with the URL GitHub Pages reports, so this value only matters for LOCAL
-# builds — but keeping it correct means `hugo` locally generates the right links.
-# The  static/CNAME  file is what actually binds the domain to the site.
+# baseURL — the live site URL.
+#   • Repo named  misterz.github.io   → keep this as-is (root URL).
+#   • Any other repo name (e.g. "blog") → the deploy workflow overrides this at
+#     build time with the real Pages URL, so the subpath is handled for you.
+#   • Custom domain later? Put the domain here and add  static/CNAME  (see README).
 # ─────────────────────────────────────────────────────────────────────────────
-baseURL = "https://akira.sh/"
+baseURL = "https://misterz.github.io/"
 languageCode = "en-us"
 title = "Akira — Security Research"
 theme = "PaperMod"

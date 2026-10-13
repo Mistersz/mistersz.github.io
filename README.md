@@ -7,12 +7,11 @@ auto-deployed to GitHub Pages via GitHub Actions.
 
 ## Push it live (first time)
 
-Site is configured for the custom domain **`akira.sh`** (apex). The `static/CNAME`
-file in this repo binds it; you just need the repo pushed and DNS pointed.
-
 ```bash
-# 1. Create an EMPTY repo on GitHub (no README/license). Name it anything —
-#    with a custom domain the repo name doesn't affect the URL. (e.g. "blog")
+# 1. Create an EMPTY repo on GitHub (no README/license).
+#    - For the root URL (https://misterz.github.io/), name it:  misterz.github.io
+#    - Any other name (e.g. "blog") also works → URL becomes .../blog/.
+#      The deploy workflow handles the subpath automatically; nothing to edit.
 
 # 2. Point this repo at it and push:
 git remote add origin git@github.com:Misterz/<REPO_NAME>.git   # or the https URL
@@ -23,44 +22,26 @@ git push -u origin main
 #    (do this once; the workflow in .github/workflows/hugo.yml does the rest.)
 ```
 
-### Point `akira.sh` at GitHub Pages (DNS)
+Every `git push` to `main` rebuilds and redeploys. Watch it in the **Actions** tab;
+the live URL shows up under the **deploy** job when it finishes.
 
-At your registrar for `akira.sh`, create these records:
+> **Note on `baseURL`:** the *deployed* site always gets the right URL — the
+> workflow pulls it from GitHub Pages at build time. The `baseURL` in `hugo.toml`
+> only affects local builds.
 
-| Type   | Host / Name | Value                 |
-|--------|-------------|-----------------------|
-| `A`    | `@`         | `185.199.108.153`     |
-| `A`    | `@`         | `185.199.109.153`     |
-| `A`    | `@`         | `185.199.110.153`     |
-| `A`    | `@`         | `185.199.111.153`     |
-| `AAAA` | `@`         | `2606:50c0:8000::153` |
-| `AAAA` | `@`         | `2606:50c0:8001::153` |
-| `AAAA` | `@`         | `2606:50c0:8002::153` |
-| `AAAA` | `@`         | `2606:50c0:8003::153` |
-| `CNAME`| `www`       | `misterz.github.io.`  |
+### Adding a custom domain later (optional)
 
-- The four `A` (and matching `AAAA` for IPv6) records point the **apex** `akira.sh`
-  at Pages. The `www` `CNAME` is optional but recommended — GitHub auto-redirects
-  `www.akira.sh` → `akira.sh`.
-- `.sh` registrars sometimes don't allow apex `A` records (no "ALIAS/ANAME"
-  support). If yours doesn't, the fallback is to host on `www.akira.sh` instead:
-  make `www` the custom domain in Pages settings, put `www.akira.sh` in
-  `static/CNAME`, and keep only the `www` `CNAME` record above.
+Not set up now — the site runs on `misterz.github.io`. To switch to a custom
+domain (e.g. `akira.sh`) whenever you want:
 
-### Finish on GitHub
-
-1. **Settings → Pages → Custom domain** → enter `akira.sh` → **Save**.
-   (GitHub runs a DNS check; it goes green once the records above propagate —
-   usually minutes, up to ~an hour.)
-2. Once green, tick **Enforce HTTPS** (waits for the TLS cert to provision).
-
-Every `git push` to `main` rebuilds and redeploys. Watch it in the **Actions** tab.
-
-> **How the domain binds:** `static/CNAME` → published as `/CNAME` on every build,
-> which is what tells Pages to serve the site at `akira.sh`. The deploy workflow
-> also reads the domain back from Pages and feeds it to Hugo as `--baseURL`, so
-> generated links are correct. Don't delete the `CNAME` file — a build without it
-> resets the custom domain in Pages settings.
+1. Create `static/CNAME` containing just the domain (e.g. `akira.sh`), and set
+   `baseURL` in `hugo.toml` to `https://akira.sh/`.
+2. At your registrar, point DNS at GitHub Pages — apex: four `A` records to
+   `185.199.108.153` … `185.199.111.153` (plus `AAAA` for IPv6); or a `www`
+   `CNAME` → `misterz.github.io.`. (Note: some `.sh` registrars don't allow apex
+   `A` records — if so, host on `www.` instead.)
+3. GitHub → **Settings → Pages → Custom domain** → enter it → **Save** → tick
+   **Enforce HTTPS** once the cert provisions.
 
 ---
 
