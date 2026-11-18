@@ -20,11 +20,11 @@ weight: 1
 ## Introduction
 
 Imagine a world where reading data from files leads you to corrupted bytes,
-which eventually would reveal themselves to be the result of an extremelly interesting chain 
+which eventually would reveal themselves to be the result of an extremely interesting chain 
 of coincidencies that brought up to light the unintended interacting behaviour between
-the Linux Pipe Subsystem and Memmory Managment Subsystem (leading to a priv escal).
+the Linux Pipe Subsystem and Memmory Management Subsystem (leading to a priv escal).
 
-That is what happened with Max Kellerman, when he disclousured his findings on the 
+That is what happened with Max Kellerman, when he disclosed his findings on the 
 Dirty Pipe (CVE-2022-0847) vulnerability, which allowed basically arbitrary write
 on the page cache. This primitive, on that specific memory region, allows for privilege
 escalation, corruption of `/etc/passwd` file, manufacturing ssh keys, sudo hijacking and more.
@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
 
 Basically, what is happening here is:
 
--> The first program writes, indefinelly, 5 bytes of data ("AAAAA") to the "foo" file, which
+-> The first program writes, indefinitely, 5 bytes of data ("AAAAA") to the "foo" file, which
 where the program's file descriptor 1 (stdout) points to in this case. 
 
 -> The second program copies the data received from stdin (in this case, the data from foo file)
@@ -119,7 +119,7 @@ The following questions (processes?) become key for understandment
     i. How file data gets transfered to memory for use?
     ii. What are pipes and how they get data onto it?
     iii. `splice()` behaviour with ( file -> pipe ) data transfer?
-    iv. How pipes process writes and subsequential writes?
+    iv. How pipes process writes and subsequent writes?
 
 ----------------
 
@@ -535,8 +535,8 @@ Finally:
                 V       |        (reads decrement the len index)
                         |             
           Drain the pipe     =======> this clears the contents on the 
-                |                     pipe buffers while lefting their
-                |                                flags.
+                |                     pipe buffers while leaving their
+                |                            flags unchanged.
                 |
                \ /       |----> The amount of data is arbritary.
                 V        |        Should be at least 1 byte.
