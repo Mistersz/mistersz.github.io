@@ -133,7 +133,7 @@ a page.
 
 Pages are merely the name that is given for a continous region of 4KiB (4 * 2^10 bytes)
 of memory address. Basically, each page carries over 4096 bytes, so 4096 addresses.
-In hexadecimal notation that would be `0x1000` bytes. [rephrase]
+In hexadecimal notation that would be `0x1000` bytes.
 
 When a program reads data from a file for the first time, the kernel copies a number of page chunks from the hard-drive
 to kernel memory (RAM). The subsystem responsible for storaging and managing those types of pages (file-backed pages)
@@ -174,7 +174,7 @@ On Kernel Linux, pipes are implemented as a ring buffer.
 ![Ring buffer's visualization](/images/dirty-pipe/ringbuffer.png)
 
 Ring buffers are essentially a circular array buffer where the last element points to the first element.
-They hold two important integers, `head` and `tail`, which are the index of the next slot to write
+They hold two important integers, `head` and `tail`, which are the indexes of the next slot to write
 and next slot to read, respectively.
 
 The `pipe_inode_info` struct describe it's implementation on pipes. As you notice, pipes are represented by
@@ -212,9 +212,9 @@ struct pipe_buffer {
 <small>Source: <a href="https://github.com/torvalds/linux/blob/v5.19/include/linux/pipe_fs_i.h">Linux 5.19 — struct pipe_buffer; see Linux source</a></small>
 
 The page pointer holds the address containing the page with pipe buffer data.
-`offset` and `len` define the range of the buffer within the page that can be read / written, where
-`offset` is the current location within the page and `len` is number of bytes that can
-still be read / written.
+`offset` and `len` define the buffer'sa range within the page. `offset` is the current 
+location within the readable region of the page and `len` is number of bytes that 
+written on that page.
 
 
 One important thing to estabilish is: what is an anonymous pipe?
@@ -269,7 +269,7 @@ to the folio (base page of consecutive pages) into the iov iterator (reference b
 It calls `__copy_page_to_iter()` in a loop, handling iov iterator and calls 
 appropriartly. By the end, `copy_page_to_iter_pipe()` is called, since is the function that 
 handles transfers between file backed data to a pipe. It assigns `buf->page` to the 
-page cache's page address, alongside with its read / write `len`, `offset` and `ops`. 
+page cache's page address, alongside with `len`, `offset` and `ops`. 
 
 `copy_page_to_iter_pipe()` body:
 
@@ -322,7 +322,7 @@ out:
 
 <small>Source: <a href="https://github.com/torvalds/linux/commit/241699cd72a8489c9446ae3910ddd243e9b9061b">Linux commit 241699cd72a8 — copy_page_to_iter_pipe() (historical implementation)</a></small>
 
-After assigning the corresponded fields, it advances the pipe's `head` pointer.
+After assigning the corresponded fields, it advances the pipe's `head`.
 Seems reasonable and normal, right? 
 
 ### 4. Writes to pipes
@@ -330,10 +330,10 @@ Seems reasonable and normal, right?
 Writes to pipes are handled by the `pipe_write()` function. Newer kernel linux versions
 split it into two functions: `anon_pipe_write()` and `fifo_pipe_write()`.
 
-Firstly, it selects the current `pipe_buffer` struct that is pointed by the `head` pointer of the pipe, to
+Firstly, it selects the current `pipe_buffer` struct that is pointed by the `head` of the pipe, to
 check if the pipe is full.
 
-If not, it advances the `head` pointer and inserts the allocated page into the buffer array (pointed by the `head`),
+If not, it advances the `head` and inserts the allocated page into the buffer array (pointed by the `head`),
 as well as setting up its other fields: `ops`, `offset`, `len` and `flags`.
 
 
