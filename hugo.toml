@@ -5,7 +5,7 @@
 #     build time with the real Pages URL, so the subpath is handled for you.
 #   • Custom domain later? Put the domain here and add  static/CNAME  (see README).
 # ─────────────────────────────────────────────────────────────────────────────
-baseURL = "https://misterz.github.io/"
+baseURL = "https://mistersz.github.io/"
 languageCode = "en-us"
 title = "Akira — Security Research"
 theme = "PaperMod"
