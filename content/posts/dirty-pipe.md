@@ -199,7 +199,7 @@ struct pipe_inode_info {
 
 `ring_size` is normally 16 on Linux Kernel, meaning 16 `pipe_buffer` entries.
 
-The `pipe_buffer` struct is defined as follows:
+The `pipe_buffer` struct is defined as it follows:
 
 ```c
 
