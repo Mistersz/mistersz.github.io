@@ -1,0 +1,29 @@
+{{- $items := .Site.Data.upcoming.items -}}
+<section class="akira-roadmap" aria-label="Upcoming blogposts">
+  <div class="akira-roadmap__legend" aria-label="Possible statuses">
+    {{- range (slice "Planned" "Researching" "Drafting" "Reviewing" "Paused") }}
+      <span class="akira-roadmap__label">{{ . }}</span>
+    {{- end }}
+  </div>
+  {{- with $items }}
+  <div class="akira-roadmap__items">
+    {{- range . }}
+      {{- $status := lower (default "planned" .status) -}}
+      {{- if not (in (slice "planned" "researching" "drafting" "reviewing" "paused") $status) }}{{- $status = "planned" -}}{{- end }}
+      <article class="akira-roadmap__item">
+        <div class="akira-roadmap__top">
+          <span class="akira-roadmap__area">{{ default "Research notes" .area }}</span>
+          <span class="akira-roadmap__status akira-roadmap__status--{{ $status }}">{{ $status | title }}</span>
+        </div>
+        <h2>{{ .title }}</h2>
+        {{- with .summary }}<p>{{ . }}</p>{{ end }}
+      </article>
+    {{- end }}
+  </div>
+  {{- else }}
+  <div class="akira-roadmap__empty">
+    <strong>No announced posts yet.</strong>
+    <p>The research queue is taking shape. I'll list projects here when there's something concrete to share.</p>
+  </div>
+  {{- end }}
+</section>

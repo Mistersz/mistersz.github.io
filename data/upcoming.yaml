@@ -1,0 +1,10 @@
+# Add one entry per post you want to announce publicly.
+# Valid status values: planned, researching, drafting, reviewing, paused.
+# Delete the leading # marks to activate an entry. Titles here are EXAMPLES ONLY.
+# items:
+#   - title: "A future systems research post"
+#     area: "Linux kernel"
+#     status: "researching"
+#     summary: "Reading source and taking notes."
+
+items: []

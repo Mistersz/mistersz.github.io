@@ -28,7 +28,7 @@ That is what happened with Max Kellerman, when he disclosed his findings on the
 Dirty Pipe (CVE-2022-0847) vulnerability, which allowed basically arbitrary write
 on the page cache. This primitive, on that specific memory region, allows for privilege
 escalation, corruption of `/etc/passwd` file, manufacturing ssh keys, sudo hijacking and more.
-Accouting it's impact and low execution complexity, Dirty Pipe was crowned with
+Accounting it's impact and low execution complexity, Dirty Pipe was crowned with
 a CVSSv3 score of 7.8 (high) by NVD.
 
 So let's tag along and understand how this was even possible. This post will try to explain
@@ -135,6 +135,10 @@ Pages are merely the name that is given for a continous region of 4KiB (4 * 2^10
 of memory address. Basically, each page carries over 4096 bytes, so 4096 addresses.
 In hexadecimal notation that would be `0x1000` bytes.
 
+Page size varies accordantly the CPU architecture (MMU) and OS directives, certain architectures
+allow for bigger and smaller page size. We are considering here the classical x86/x86-64 (same as
+RISC-V btw).
+
 When a program reads data from a file for the first time, the kernel copies a number of page chunks from the hard-drive
 to kernel memory (RAM). The subsystem responsible for storaging and managing those types of pages (file-backed pages)
 is called the page cache. 
@@ -173,9 +177,9 @@ On Kernel Linux, pipes are implemented as a ring buffer.
 
 ![Ring buffer's visualization](/images/dirty-pipe/ringbuffer.png)
 
-Ring buffers are essentially a circular array buffer where the last element points to the first element.
-They hold two important integers, `head` and `tail`, which are the indexes of the next slot to write
-and next slot to read, respectively.
+Ring buffers are essentially a circular array buffer. They hold two important integers, `head` and `tail`, which are the indexes of the next slot to write
+and next slot to read, respectively. For accessing elements on the array, a bitwise AND is performed with a variable called `mask`
+which is ring buffer size - 1. Basically emulating a modulo operation.
 
 The `pipe_inode_info` struct describe it's implementation on pipes. As you notice, pipes are represented by
 this ring buffer of `pipe_buffer` structs.
@@ -209,13 +213,13 @@ struct pipe_buffer {
 
 ```
 
-<small>Source: <a href="https://github.com/torvalds/linux/blob/v5.19/include/linux/pipe_fs_i.h">Linux 5.19 — struct pipe_buffer; see Linux source</a></small>
+<small>Source: <a href="https://github.com/torvalds/linux/blob/v5.19/include/linux/pipe_fs_i.h">Linux 5.19 — struct pipe_buffer</a></small>
 
 The page pointer holds the address containing the page with pipe buffer data.
-`offset` and `len` define the buffer'sa range within the page. `offset` is the current 
-location within the readable region of the page and `len` is number of bytes that 
-written on that page.
-
+`offset` and `len` define the buffer's range within the page. `offset` is the lower bound
+for reads on the page, while `len`, is the number of bytes written and not consumed by a read
+on the buffer. When a read is perfomed, the `offset` field is increased by the same amount `len`
+is decreased, preserving the bytes that still need to be read out the buffer.
 
 One important thing to estabilish is: what is an anonymous pipe?
 They are pipes that are not backed by a file on the file system, which by consequence,
@@ -242,8 +246,8 @@ for `0x10`), since the checking for the flag is a bitwise operation.
 
 ### 3. `splice()` workings
 
-`splice()` is a linux system call that allows transfering data between two file descriptors through a pipe.
-As discussed before, transfering data this way, does not make a trip to userland.
+`splice()` is a linux system call that allows transfering data between two file descriptors where one of them
+must be a pipe. As discussed before, transfering data this way, does not make a trip to userland.
 
 Let's focus on the specific case transfering data from a file to a pipe.
 
@@ -265,7 +269,9 @@ Focusing on the last functions that are called:
     - `copy_page_to_iter_pipe()`
 
 `copy_page_to_iter()` is responsible for transfering the data from the page cache pages
-to the folio (base page of consecutive pages) into the iov iterator (reference by iter).
+in the folio (base page of consecutive pages) to the iov iterator (reference by iter), used by the 
+pipe for reading the file data.
+
 It calls `__copy_page_to_iter()` in a loop, handling iov iterator and calls 
 appropriartly. By the end, `copy_page_to_iter_pipe()` is called, since is the function that 
 handles transfers between file backed data to a pipe. It assigns `buf->page` to the 
@@ -322,7 +328,6 @@ out:
 
 <small>Source: <a href="https://github.com/torvalds/linux/commit/241699cd72a8489c9446ae3910ddd243e9b9061b">Linux commit 241699cd72a8 — copy_page_to_iter_pipe() (historical implementation)</a></small>
 
-After assigning the corresponded fields, it advances the pipe's `head`.
 Seems reasonable and normal, right? 
 
 ### 4. Writes to pipes
@@ -370,7 +375,9 @@ as well as setting up its other fields: `ops`, `offset`, `len` and `flags`.
 <small>Source: <a href="https://blogs.oracle.com/linux/pipe-and-splice">Oracle Linux — pipe_write() excerpt, Linux 5.19</a></small>
 
 The bytes written to it are stored on the page it points to, for anonymous pipes, this would
-be an anonymous page. Remember, all read and write operations on the page are within the range of `buf->offset` and `buf->len`.
+be a page similar to an anonymous one.
+
+Remember, all read and write operations on the page are within the range of `buf->offset` and `buf->len`.
 
 Subsequential writes to the pipe normally follow the behaviour described above, 
 advancing the `head` and setting up fields for the ring slot.
@@ -378,6 +385,21 @@ advancing the `head` and setting up fields for the ring slot.
 But if the `PIPE_BUF_FLAG_CAN_MERGE` is set and a write happens the new inserted content 
 is going to be appended to the page pointed by the `pipe_buffer` struct, instead of allocating 
 a new `pipe_buffer` and moving the ring's `head`.
+
+```c
+
+buf = &pipe->bufs[(head - 1) & mask];
+int offset = buf->offset + buf->len;
+
+if ((buf->flags & PIPE_BUF_FLAG_CAN_MERGE) &&
+    offset + chars <= PAGE_SIZE) {
+    ...
+    ret = copy_page_from_iter(buf->page, offset, chars, from);
+    buf->len += ret;
+}
+
+```
+
 
 
 # How they tie together
@@ -400,14 +422,14 @@ new knowledge.
         |-> splice() ultimatelly invokes copy_page_to_iter_pipe() to initialize a 
             pipe_buffer for storing the contents of the file.
 
-    iii. Writes to a pipe previously used  [refazer esse]
+    iii. Writes to a pipe previously used 
          |
          |
          |
          |-> Writes on pipes happen on the page pointed by pipe_buffer. The behaviour
              of subsequential writes vary depending on the initialized flags on 
              pipe_buffer. Is possible for content to be appended if the 
-             PIPE_BUF_CAN_MERGE_FLAG is setted.
+             PIPE_BUF_FLAG_CAN_MERGE is setted.
 
 
 In theory, following what we discussed, everything should be alright and it should not result
@@ -455,8 +477,8 @@ There are no mentions to `buf->flag` at all, which means that `copy_page_to_iter
 fails at setting `flags` for the `pipe_buffer`. Wait, what does this mean for the pipe?
 
 If that instance of `pipe_buffer` was not previously used, it would have no `flags` initialized
-but if it was indeed used, specially by an anonymous pipe, the `PIPE_BUF_FLAG_CAN_MERGE` would still be setted, since
-no new value was assigned to it.
+but if it was indeed used, specially by an anonymous pipe, the flag would still be setted, since
+no new value was assigned to `buf->flag`, overwriting what was previously there.
 
 With this new info we now have:    
 
@@ -480,7 +502,7 @@ With this new info we now have:
                         on a pipe_buffer.
 
 
-    iii. Writes to a pipe previously used  [refazer esse]
+    iii. Writes to a pipe previously used  
          |
          |
          |
@@ -508,7 +530,7 @@ The last piece is how to modularized this into a systematic approach in order to
 Basically we have to manufacture the conditions that we observed from the experiment and
 achieve by the end:
 
-    A pipe with pipe buffers holding a page cache reference, with `PIPE_BUF_CAN_MERGE_FLAG` setted.
+    A pipe with pipe buffers holding a page cache reference, with `PIPE_BUF_FLAG_CAN_MERGE` setted.
 
 With our given machinery, we do have some limitations:
 
@@ -550,16 +572,17 @@ Finally:
                 V
             write data 
              into the   =======> Data will be appended to the file page
-               pipe              on page cache due PIPE_BUF_CAN_MERGE_FLAG.
+               pipe              on page cache due PIPE_BUF_FLAG_CAN_MERGE.
                                  Effectively writing on the page cache via
                                  the target's address.
 
 An interesting fact is: The changes on the file does not necessarily persist, since
-they may to be applied to the file, they are just applied to a copy of the file's data, 
+they are not applied to the file, they are just applied to a copy of the file's data, 
 stored on the page cache (remember? the kernel copies the data from the disk to the 
 page cache).
 
-
+In our case, the page is never marked as dirty by the kernel. That happens because, even
+though the pipe doesnt have write permissions to the file, 
 
 # Conclusion and author's thought :D
 

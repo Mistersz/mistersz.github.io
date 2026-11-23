@@ -1,0 +1,22 @@
+{{- /* Akira custom home-info, preserving title/description/social links from hugo.toml */ -}}
+<article class="first-entry home-info akira-hero">
+  <div class="akira-hero__layout">
+    <div class="akira-hero__copy">
+      <div class="akira-hero__eyebrow"><span class="akira-hero__accent" aria-hidden="true"></span><span lang="ja">アキラ</span><span class="akira-hero__eyebrow-sep">/</span> FIELD NOTES</div>
+      <h1 class="akira-hero__title">{{ .Site.Params.homeInfoParams.Title | markdownify }}</h1>
+      <div class="akira-hero__description">{{ .Site.Params.homeInfoParams.Content | markdownify }}</div>
+      {{- with .Site.Params.socialIcons }}
+      <div class="akira-hero__links">
+        {{- partial "social_icons.html" (dict "align" "left" "icons" .) -}}
+      </div>
+      {{- end }}
+    </div>
+    <div class="akira-hero__art" aria-hidden="true">
+      <img src="{{ "images/akira-fuji.svg" | relURL }}" alt="" decoding="async" fetchpriority="high">
+    </div>
+  </div>
+  <div class="akira-section-heading">
+    <span><i aria-hidden="true">/</i> LAST BLOGPOST</span>
+    <a href="{{ "posts/" | relURL }}">ALL POSTS <span aria-hidden="true">↗</span></a>
+  </div>
+</article>

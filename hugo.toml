@@ -7,7 +7,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 baseURL =  "https://akirasec.dev/"
 languageCode = "en-us"
-title = "Akira — Security Research"
+title = "akira — security sesearch"
 theme = "PaperMod"
 
 # Pretty URLs, UTF-8, and sane defaults
@@ -45,7 +45,7 @@ pygmentsUseClasses = true
 
 [params]
   env = "production"
-  author = "Akira"
+  author = "akira"
   description = "VM escape, hypervisor security, and low-level exploitation writeups."
   keywords = ["security", "exploitation", "vm escape", "qemu", "hypervisor", "ctf", "pwn"]
   DateFormat = "2006-01-02"
@@ -66,8 +66,8 @@ pygmentsUseClasses = true
 
   # Landing page: a short intro with links (clean for an interview reviewer)
   [params.homeInfoParams]
-    Title = "Akira"
-    Content = "Security research — Linux kernel & the virtualization stack (VM escapes, hypervisor security, microarchitecture). CS @ UFRJ. This is where I publish writeups."
+    Title = "akira"
+    Content = "sec researcher focused on linux kernel & the virtualization stack (VM escapes, hypervisor security, sandboxing). CS @ UFRJ."
 
   # Social / contact icons on the landing page
   [[params.socialIcons]]
