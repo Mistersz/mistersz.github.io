@@ -1,7 +1,7 @@
 ---
 title: "cleaning the dirtiest of the pipes"
 date: 2026-10-06
-draft: false
+draft: true
 summary: "trying to clean up those dirty pipes (study on CVE-2022-0847)"
 description: "deep dive on Dirty Pipe (CVE-2022-0847) and its inner workings"
 tags: ["research", "analysis"]
@@ -42,9 +42,9 @@ by the following structure:
     5. The exploit
 
 For me, this vulnerability is amazing since the moment of its discovery
-from it's exploration, not only due it's simplicity but also by the way
+to it's exploration, not only due it's simplicity but also by the way
 it was discovered and researched. In the end, i took the liberty to 
-write some thoughts about the process of the discoverement of the vuln.
+write some thoughts about the process of the discovery of the vuln.
 
 
 ----------------------
@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
 
 Basically, what is happening here is:
 
--> The first program writes, indefinitely, 5 bytes of data ("AAAAA") to the "foo" file, which
+-> The first program writes, indefinitely, 5 bytes of data ("AAAAA") to the "foo" file, which is
 where the program's file descriptor 1 (stdout) points to in this case. 
 
 -> The second program copies the data received from stdin (in this case, the data from foo file)
@@ -118,7 +118,7 @@ The following questions (processes?) become key for understandment
 
     i. How file data gets transfered to memory for use?
     ii. What are pipes and how they get data onto it?
-    iii. `splice()` behaviour with ( file -> pipe ) data transfer?
+    iii. `splice()` behaviour with ( file -> pipe ) data transfer
     iv. How pipes process writes and subsequent writes?
 
 ----------------
@@ -151,7 +151,7 @@ there is an interesting cavenant here:
 
 Not all the syscalls "behave" the same. The way system calls are implemented define how they interact with memory, files, other subsystems, processes and more.
 For example, the `read()` syscall takes a copy from a file's data and writes it into an specified buffer.
-Meanwhile, as Max pointed out on his disclousure, `splice()` and `send_file()` are considered zero-copy,
+Meanwhile, as Max pointed out on his disclousure, `splice()` and `sendfile()` are considered zero-copy,
 meaning that those syscalls do not make copies of whatever bytes they are transfering, instead
 they do it by reference (with pointers!).
 
@@ -341,6 +341,46 @@ check if the pipe is full.
 If not, it advances the `head` and inserts the allocated page into the buffer array (pointed by the `head`),
 as well as setting up its other fields: `ops`, `offset`, `len` and `flags`.
 
+```c
+
+for (;;) {
+    head = pipe->head;
+    if (!pipe_full(head, pipe->tail, pipe->max_usage)) {
+        unsigned int mask = pipe->ring_size - 1;
+        struct pipe_buffer *buf = &pipe->bufs[head & mask];
+        struct page *page = NULL;
+        int copied;
+
+        if (!page) {
+            page = alloc_page(GFP_HIGHUSER | __GFP_ACCOUNT);
+            if (unlikely(!page)) {
+                ret = ret ? : -ENOMEM;
+                break;
+            }
+        }
+
+        /* Allocate a slot in the ring in advance and attach an
+         * empty buffer.  If we fault or otherwise fail to use
+         * it, either the reader will consume it or it'll still
+         * be there for the next write.
+         */
+        spin_lock_irq(&pipe->rd_wait.lock);
+
+        head = pipe->head;
+        if (pipe_full(head, pipe->tail, pipe->max_usage)) {
+            spin_unlock_irq(&pipe->rd_wait.lock);
+            continue;
+        }
+
+        pipe->head = head + 1;
+        spin_unlock_irq(&pipe->rd_wait.lock);
+
+
+```
+
+And then, the user buffer is copied to the allocated page.
+
+
 
 ```c
 
@@ -374,13 +414,17 @@ as well as setting up its other fields: `ops`, `offset`, `len` and `flags`.
 
 <small>Source: <a href="https://blogs.oracle.com/linux/pipe-and-splice">Oracle Linux — pipe_write() excerpt, Linux 5.19</a></small>
 
+On this code snippet, you can check another function that also belongs to the iov interface. 
+`copy_page_from_iter()`, resposible from copying contents (in this case, the user buffer) present
+on the iterator to the refered page. 
+
 The bytes written to it are stored on the page it points to, for anonymous pipes, this would
 be a page similar to an anonymous one.
 
-Remember, all read and write operations on the page are within the range of `buf->offset` and `buf->len`.
+Remember, all read and write operations on the page are within the range of `buf->offset` and `buf->offset + buf->len`.
 
 Subsequential writes to the pipe normally follow the behaviour described above, 
-advancing the `head` and setting up fields for the ring slot.
+advancing the `head` and setting up fields for the ring slot. [ check ]
 
 But if the `PIPE_BUF_FLAG_CAN_MERGE` is set and a write happens the new inserted content 
 is going to be appended to the page pointed by the `pipe_buffer` struct, instead of allocating 
@@ -509,7 +553,7 @@ With this new info we now have:
          |-> Writes on pipes happen on the page pointed by pipe_buffer. The behaviour
              of subsequential writes vary depending on the initialized flags on 
              pipe_buffer. Is possible for content to be appended if the 
-             PIPE_BUF_CAN_MERGE_FLAG is setted.
+             PIPE_BUF_FLAG_CAN_MERGE is setted.
                 |
                 |-----> Writes directly happen on the page pointed by pipe_buffer.
 
@@ -560,8 +604,8 @@ Finally:
                 |                     pipe buffers while leaving their
                 |                            flags unchanged.
                 |
-               \ /       |----> The amount of data is arbritary.
-                V        |        Should be at least 1 byte.
+               \ /       |----> splice 1 byte just before the target's
+                V        |               desired offset
           splice data from
            the target file  =======> assigns the page cache reference 
             to the pipe              to *page on the pipe_buffer as 
@@ -581,8 +625,10 @@ they are not applied to the file, they are just applied to a copy of the file's 
 stored on the page cache (remember? the kernel copies the data from the disk to the 
 page cache).
 
-In our case, the page is never marked as dirty by the kernel. That happens because, even
-though the pipe doesnt have write permissions to the file, 
+In our case, the page is never marked as dirty by the kernel. That happens because, the
+changes made to the file were not made via the mechanism that would normally trigger a flip on the
+dirty bit page on pages. The way this works is: 
+
 
 # Conclusion and author's thought :D
 
@@ -618,7 +664,7 @@ in confirming a kernel bug, for me, it's amazing.
 
 But anyway people, thanks for reading it i hope i see you around :D
 
--
+
 
 ## References
 
